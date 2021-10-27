@@ -318,7 +318,12 @@ We can also use references to serialized assets with them without worries, as th
 
 ## 3. Focus on USES rather than DETAILS
 
-When changing or improving features in our game, we often have to refactor code or deal with changes in implementations.
+When changing or improving features in our game, we often have to deal with changes in implementations.
+Sometimes, these changes will break working components and be a pain in the ass to deal with.
+
+Sometimes we did not make these changes, yet we are still tasked with fixing stuff.
+In the worst cases we have to understand cryptic code details from others to make our adaptations.
+Even they might not know how it works anymore. Here, we discuss how to avoid that.
 
 Imagine we have a class `PlayerMotor` that handles player movement and has a property named `Speed`:
 
@@ -386,21 +391,23 @@ Now it displays correctly, as we still use a floating point number.
 
 However, imagine that we had 12 other UI elements and 5 different enemy AI implementations that used Speed as a float. Some of those components used at least 3 other properties from `PlayerMotor`, which were all changed during our Quake movement implementation. A few changed properties in `PlayerMotor` quickly caused things to spiral out of control, and now we have to fix a ton of components.
 
-While we were fixing all of these, **Junior the Legendary Elite Programming Prodigy** from our team just finished his ultimate implementation of Quake movement.
+While we were fixing all of these **Junior, the "Legendary Elite Programming Prodigy"** from our team just finished his ultimate implementation of Quake movement.
 Your boss is impressed and gave him a 120% raise, and all the while your UI components and AI agents stopped working again, since he changed all the properties in the `PlayerMotor` class.
 
 Now we have `relativeVel3D_f`, from the `VelocityComposite3D` class. Of course, we also have the `m_fric_speed_x`, `m_fric_speed_y` and `m_fric_speed_z` floats, and even a quaternion named `frameBasedRotationalSpeed_w`.
 
 **... What the hell should we even use?**
 
+---
+
 Let's take a moment to understand what is happening here.
 
-* We as UI implementers need to know implementation details about Juniuor's `PlayerMotor` implementation to calculate the speed.
+* We as UI implementers need to know implementation details about Junior's `PlayerMotor` implementation to calculate the speed.
 * This means that we will spend an insurmountable amount of time understanding his code;
 * All the UI and AI classes need to change because of `PlayerMotor`, since what they originally used was that simple float property;
 * Since the `PlayerMotor` class exposes a giant public interface to other classes, changes to isolated properties might cause unrelated components to start failing.
 
-What is happening here is that the code for all those UI components and AI agents is **heavily coupled** to our implementation of player movement.
+The code for all those UI components and AI agents is **heavily coupled** to our implementation of player movement.
 Any changes we make to movement will always break something, which makes our code really sensitive and wastes precious time we could use to implement **NEW FEATURES!**
 
 > How can we avoid this?
@@ -433,9 +440,8 @@ public class PlayerMotor : MonoBehaviour, IPhysicsCharacter
 }
 ```
 
-Even if our friend **Junior the Legendary Elite Programming Prodigy** decides to remove or rename the field speed, he still has to keep the public interface working.
-UI components or other classes can now simply use the public interface without knowing about the implementation details,
-since `Speed` is guaranteed to be a `float`:
+Even if our friend **Junior, the "Legendary Elite Programming Prodigy"** decides to remove or rename "Speed", he still has to keep the public interface working.
+UI components or other classes can now simply use the public interface without knowing about the implementation details, since `Speed` is guaranteed to be a `float`:
 
 ```csharp
 public class UISpeedometer : MonoBehaviour
@@ -474,8 +480,6 @@ So, what did we do here?
 * We heavily reduced change propagation, which means less time fixing! Now, if someone changes the implementation in `PlayerMotor`, we don't need to worry about it.
 
 ---
-
-TO BE CONTINUED
 
 ## 4. Avoid CLUTTERING your Prefabs
 
