@@ -10,21 +10,21 @@ So we want to find a way deliver these faster, consistently, and be able to mini
 
 > But how can we do that?
 
-We can start by having some general guidelines for our projects:
+We can start by having some general guidelines for our code:
 
 * Less confusion -> Less bugs -> Less fixing -> **More features**
 * Less redundancy -> Less conflicts -> Less meetings -> **More features!**
 * Smaller batches of work -> Deliver faster & often -> Less testing -> Smaller fixes -> **Even more features!!!**
 
-Now let's put these guidelines to use with some **actions**.
+Now let's put these guidelines to use.
 
 ---
 
-## 1. Avoid FIGHTING DESIGNERS
+## 1. Stop FIGHTING DESIGNERS
 
 There is something we often don't perceive when programming in Unity:
 
-> Scene and Prefab Hierarchy are part of the code.
+**Scene and Prefab Hierarchy are part of the code.**
 
 MonoBehaviours are bound to GameObjects. We need GameObjects for MonoBehaviours to reference each other. We often make a GameObject a child of another just to communicate component relationship.
 
@@ -391,7 +391,7 @@ Now it displays correctly, as we still use a floating point number.
 
 However, imagine that we had 12 other UI elements and 5 different enemy AI implementations that used Speed as a float. Some of those components used at least 3 other properties from `PlayerMotor`, which were all changed during our Quake movement implementation. A few changed properties in `PlayerMotor` quickly caused things to spiral out of control, and now we have to fix a ton of components.
 
-While we were fixing all of these **Junior, the "Legendary Elite Programming Prodigy"** from our team just finished his ultimate implementation of Quake movement.
+While we were fixing all of these, **Junior the "Programming Prodigy"** from our team just finished his ultimate implementation of Quake movement.
 Your boss is impressed and gave him a 120% raise, and all the while your UI components and AI agents stopped working again, since he changed all the properties in the `PlayerMotor` class.
 
 Now we have `relativeVel3D_f`, from the `VelocityComposite3D` class. Of course, we also have the `m_fric_speed_x`, `m_fric_speed_y` and `m_fric_speed_z` floats, and even a quaternion named `frameBasedRotationalSpeed_w`.
@@ -402,7 +402,7 @@ Now we have `relativeVel3D_f`, from the `VelocityComposite3D` class. Of course, 
 
 Let's take a moment to understand what is happening here.
 
-* We as UI implementers need to know implementation details about Junior's `PlayerMotor` implementation to calculate the speed.
+* We as UI implementers need to know details about Junior's `PlayerMotor` implementation to calculate the speed.
 * This means that we will spend an insurmountable amount of time understanding his code;
 * All the UI and AI classes need to change because of `PlayerMotor`, since what they originally used was that simple float property;
 * Since the `PlayerMotor` class exposes a giant public interface to other classes, changes to isolated properties might cause unrelated components to start failing.
@@ -440,7 +440,7 @@ public class PlayerMotor : MonoBehaviour, IPhysicsCharacter
 }
 ```
 
-Even if our friend **Junior, the "Legendary Elite Programming Prodigy"** decides to remove or rename "Speed", he still has to keep the public interface working.
+Even if our friend **Junior the "Programming Prodigy"** decides to remove or rename "Speed", he still has to keep the public interface working.
 UI components or other classes can now simply use the public interface without knowing about the implementation details, since `Speed` is guaranteed to be a `float`:
 
 ```csharp
@@ -481,20 +481,91 @@ So, what did we do here?
 
 ---
 
-## 4. Avoid CLUTTERING your Prefabs
+## 4. Avoid CLUTTERING your GameObjects & Prefabs
 
-Problems
+In Unity, we tend to like `MonoBehaviours` a lot because of how convenient they are. Essentially, they are plug-and-play scripts that can be attached to any GameObject, while also having serializable data in the inspector.
 
-* Dependencies
-* Unclear execution order
-* Unusable inspectors
-* ... Conflicts again
+However, it's all fun and games until we use **too many** MonoBehaviours.
 
-Solution: Native C# classes vs MonoBehaviours
+And I'm not talking just about the **number**. Generally, it's a good idea to have many single-responsibility and decoupled classes rather than giant classes that implement too much functionality or complex inheritance schemes.
 
-* RAII
-* Explicit & Controlled execution order
-* Cleaner inspectors
+What I'm talking about is this:
+
+![alt text](fig-article-cluttered-inspector.png "Title")
+
+Where MonoBehaviours clutter your inspector, or this:
+
+![alt text](fig-article-complex-hierarchy.png "Title")
+
+Where MonoBehaviours are spread out through complex hierarchies over multiple prefabs, or this:
+
+![alt text](fig-article-execution-order.png "Title")
+
+Where you have to juggle the execution order of MonoBehaviours to handle dependencies.
+
+While these examples were simple and might not be too scary, imagine what happens as projects scale in size and hundreds of people are modifying these same assets.
+
+So here are some problems with `MonoBehaviours`:
+
+* **Unclear execution order**. Sometimes there are too many MonoBehaviours in your project, and it's hard to keep track which ones initialize or update first;
+* **Refactoring**. If you change a field type and name, Unity will often lose references;
+* **Dependencies**. Your MonoBehaviours might be distributed in a cluttered or complex prefab hierarchy, making it slow to edit references;
+* **Cluttering**. You might have so many MonoBehaviours on a GameObject that the inspector becomes unusable.
+
+> How can we deal with that?
+
+This is not a tip you can apply everywhere, but sometimes we can just... **not** use MonoBehaviours. Simple C# classes can go far in terms of implementing behavior. Of course, you still need MonoBehaviours to bind your code to Unity's initialization, update, and to serialize data.
+
+So here's the idea: for complex Prefab-based systems, have a root MonoBehaviour with a set of modules:
+
+![alt text](fig-article-centralized-loop.png "Title")
+
+Each module is explicitly initialized and updated by that MonoBehaviour through code, while references and data are passed through constructors:
+
+```csharp
+public Player : MonoBehaviour
+{
+    // References
+    [SerializeField] private CharacterController charController;
+
+    // Serialized fields
+    [SerializeField] private PlayerData data;
+
+    // Runtime fields
+    private InputHandler input;
+    private PlayerMotor motor;
+    private PlayerCombatController combat;
+
+    private void Awake()
+    {
+        input = new InputHandler(data.inputData);
+        motor = new PlayerMotor(charController, data.moveData);
+        combat = new PlayerCombatController(data.combatData);
+    }
+
+    private void Start()
+    {
+        input.Initialize();
+        motor.Initialize();
+        combat.Initialize();
+    }
+
+    private void Update()
+    {
+        input.Update();
+        motor.Update();
+        combat.Update();
+    }
+}
+```
+
+Here are some benefits of this approach:
+
+* **[Resource Acquisition is Initialization](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization)**. By passing references and dependencies through constructors, we are guaranteed to have what we need when each class is instanced;
+* **Code-driven execution order**. We can explicitly tell which order components will execute in our code. No more "Script Execution Order". Now, things are localized to a few root MonoBehaviours;
+* **Cleaner inspectors**. Now, the responsibility of implementation is localized to a set of subclasses which are instanced in a single MonoBehaviour;
+* **Less time browsing through hierarchy**. Native C# classes are not bound to GameObjects, and therefore don't need to be in our prefabs or scenes. Values are localized to fewer objects;
+* **Easier Debugging**. You can step through the execution of each frame in a prefab hierarchy using debugging tools without jumping around code too much.
 
 ---
 
