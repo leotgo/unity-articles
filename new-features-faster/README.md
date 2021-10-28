@@ -100,7 +100,9 @@ Now we can have instances separated from scenes and at organized folders that Ga
 They can also create multiple instances of the same ScriptableObject and swap out the references to test how each parameter configuration works out.
 All the configurations will be safely stored in separate files, and the values will persist between plays!
 
-This greatly reduces merging conflicts when designers are changing values. And even if we have to solve merging conflicts, we deal with way less data. Look at the .asset file for our ScriptableObject:
+This greatly reduces merging conflicts when designers are changing values. And even if we have to solve merging conflicts, we deal with way less data.
+
+Look at the .asset file for our ScriptableObject:
 
 ```yaml
 %YAML 1.1
