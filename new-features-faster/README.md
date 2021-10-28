@@ -34,6 +34,8 @@ They might also modify prefabs to add new behaviours, or create copies of a pref
 Both us and the designers are trying to modify the same objects.
 This creates merging conflicts in Git, and might cause problems that we have to fix before the designer can continue.
 
+---
+
 > How do we avoid this?
 
 **ScriptableObjects!**
@@ -146,6 +148,8 @@ In most cases, we need to attach our Managers to GameObjects and explicitly tell
 
 We are **explicitly managing the lifetime** of references in our code, which is a dimensional portal to problems we don't want to deal with.
 There's a reason so many C++ developers are bald.
+
+---
 
 > How do we avoid this?
 
@@ -284,8 +288,6 @@ Now we have `relativeVel3D_f`, from the `VelocityComposite3D` class. Of course, 
 
 **... What the hell should we even use?**
 
----
-
 Let's take a moment to understand what is happening here.
 
 * We as UI implementers need to know details about Junior's `PlayerMotor` implementation to calculate the speed.
@@ -296,9 +298,9 @@ Let's take a moment to understand what is happening here.
 The code for all those UI components and AI agents is **heavily coupled** to our implementation of player movement.
 Any changes we make to movement will always break something, which makes our code really sensitive and wastes precious time we could use to implement **NEW FEATURES!**
 
+---
+
 > How can we avoid this?
-
-
 
 The first thing we can do is have a fixed public interface that is agnostic to the details of how we implement speed (and any other properties):
 
@@ -398,6 +400,8 @@ So here are some problems with `MonoBehaviours`:
 * **Dependencies**. Your MonoBehaviours might be distributed in a cluttered or complex prefab hierarchy, making it slow to edit references;
 * **Cluttering**. You might have so many MonoBehaviours on a GameObject that the inspector becomes unusable.
 
+---
+
 > How can we deal with that?
 
 This is not a tip you can apply everywhere, but sometimes we can just... **not** use MonoBehaviours. Simple C# classes can go far in terms of implementing behavior. Of course, you still need MonoBehaviours to bind your code to Unity's initialization, update, and to serialize data.
@@ -457,10 +461,55 @@ Here are some benefits of this approach:
 
 ## 5. ISOLATE and DIVIDE features
 
-Problems
+When multiple people are working on the same project, it is common to have friction when creating multiple features at the same time.
+For instance, a feature might require changing some system to implement, while another depends on it to function.
 
-* Multiple people on same scene
-* Out-of-date branches
-* Too much to test
+This is a little different from our public interface problem, since a feature might depend on a specific functional requirement.
 
-Solution: Git flow + Isolated Scenes + Small commits
+Let's look at a common situation:
+
+1. Developer A implements "Double Jump", which uses ground detection to reset;
+2. Developer B changes ground detection in the same scene to implement the "Invert Gravity". Now the player is also grounded when touching the ceiling.
+3. Developer A finishes their work first. They commit without worries.
+4. Many other features are developed.
+5. Developer B finally commits their work after weeks of testing. Now they have to deal with lots of merge conflicts and become frustrated. After the merge is successful, they commit.
+6. "Double Jump" is now broken since we can now fly indefinitely when touching ceilings.
+7. The Quality Assurance team informs the developers of the bugs weeks later, after testing "Invert Gravity" extensively.
+8. The "Invert Gravity" developer is tasked with fixing "Double Jump", since they broke it. Now they have to understand another dev's code.
+9. Another developer messes with the ground detection system. "Invert Gravity" breaks...
+
+Now let's imagine we have tens or hundreds of developers. Things can get out of control pretty fast.
+
+Let's try to break down what is happening:
+
+* Developer B is working on a really big feature, with lots of changes.
+* They use the same scene as developer A, which causes conflicts.
+* Many other features are implemented before their feature is finished, their branch becomes outdated.
+* Merging process is complex and many systems break.
+* Testing takes a long time.
+* Now the developers have to stop making new features for a long time to solve all the issues.
+
+Bugs propagate easily through multiple systems and might involve multiple teams. We have to contain them as soon possible. But how do we do that?
+
+---
+
+We can solve this with a few changes in our development process:
+
+### 1. Have isolated scenes and prefabs for each feature
+
+We can minimize merging conflicts by having separate scenes and prefabs. When we have to merge with the main branch, we are forced to perform integration tests, and fix any issues right at the spot.
+
+### 2. Break down features into smaller tasks
+
+In our example, many issues could be solved by simply committing the change to the ground detection system before continuing with the "Invert Gravity" implementation.
+
+By doing that, developer B could probably beat developer A by committing first, and developer A would have to fix their Double Jump when performing integration tests. Most likely, QA would not even have to test and report this issue.
+
+If we need a system change to implement a feature, this change might affect other features. We can consider this as a "Setup" task, which needs to be tested and integrated.
+
+### 3. Merge into the main branch often
+
+Merging into the main branch forces you both to keep your branch updated, and to fix any issues you caused right before merging.
+
+* If you have less stuff to merge, you have less stuff to fix.
+* If you have less stuff to fix, QA has less stuff to test.
