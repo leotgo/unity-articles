@@ -564,7 +564,7 @@ Here are some benefits of this approach:
 * **[Resource Acquisition is Initialization](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization)**. By passing references and dependencies through constructors, we are guaranteed to have what we need when each class is instanced;
 * **Code-driven execution order**. We can explicitly tell which order components will execute in our code. No more "Script Execution Order". Now, things are localized to a few root MonoBehaviours;
 * **Cleaner inspectors**. Now, the responsibility of implementation is localized to a set of subclasses which are instanced in a single MonoBehaviour;
-* **Less time browsing through hierarchy**. Native C# classes are not bound to GameObjects, and therefore don't need to be in our prefabs or scenes. Values are localized to fewer objects;
+* **Less time modifying hierarchy**. Native C# classes are not bound to GameObjects, and therefore don't need to be in our prefabs or scenes. Values are localized to fewer objects;
 * **Easier Debugging**. You can step through the execution of each frame in a prefab hierarchy using debugging tools without jumping around code too much.
 
 ---
